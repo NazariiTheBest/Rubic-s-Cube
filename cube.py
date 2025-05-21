@@ -285,6 +285,9 @@ class InteractiveCube(plt.Axes):
 
         self.figure.canvas.draw()
 
+    def _god_algorithm(self, *args):
+        print('Pressed God\'s algorithm button')
+
     def rotate(self, rot):
         self._current_rot = self._current_rot * rot
 
@@ -307,26 +310,7 @@ class InteractiveCube(plt.Axes):
             self.rotate_face(face, -n, layer, steps=3)
         self.cube._move_list = []
 
-    def _god_algorithm(self, event, *args):
-        print("IDA* solve started...")
-        solution_path = ida_star(self.cube)  # assuming self.cube is your Cube instance
 
-        if solution_path is None:
-            print("No solution found within max depth.")
-        else:
-            print(f"Solution found in {len(solution_path) - 1} moves!")
-            # Optionally animate moves or apply them step by step here:
-            # For example, to animate moves, you could iterate over solution_path
-
-            for step_cube in solution_path:
-                self.cube._colors = step_cube._colors.copy()
-                self.redraw()  # Make sure you have a method to redraw the cube visuals
-                plt.pause(0.5)  # Pause for animation effect
-
-    def redraw(self):
-        self._ax.clear()
-        self.draw_cube()
-        self.figure.canvas.draw_idle()
 
     def _key_press(self, event):
         """Handler for key press events"""
@@ -419,56 +403,3 @@ class InteractiveCube(plt.Axes):
                 self.set_ylim(factor * ylim[0], factor * ylim[1])
 
                 self.figure.canvas.draw()
-
-
-def is_solved(cube):
-    return all(np.all(cube._colors[cube._colors == i] == i) for i in range(6))
-
-def get_all_moves():
-    faces = ['F', 'B', 'R', 'L', 'U', 'D']
-    turns = [1, 2, 3]  # quarter, half, three-quarter
-    return [(f, n) for f in faces for n in turns]
-
-def apply_move(cube, move):
-    face, n = move
-    cube.rotate_face(face, n)
-    return cube
-
-def ida_star(start_cube, max_depth=20):
-    def dfs(path, g, bound):
-        cube = path[-1]
-        f = g + heuristic(cube)
-        if f > bound:
-            return f
-        if is_solved(cube):
-            return 'FOUND'
-        min_cost = float('inf')
-        for move in get_all_moves():
-            new_cube = deepcopy(cube)
-            apply_move(new_cube, move)
-            if any(np.array_equal(new_cube._colors, p._colors) for p in path):
-                continue  # avoid cycles
-            path.append(new_cube)
-            result = dfs(path, g + 1, bound)
-            if result == 'FOUND':
-                return 'FOUND'
-            if result < min_cost:
-                min_cost = result
-            path.pop()
-        return min_cost
-
-    def heuristic(cube):
-        return np.sum(cube._colors != np.sort(cube._colors))
-
-    bound = heuristic(start_cube)
-    path = [deepcopy(start_cube)]
-
-    for depth in range(max_depth):
-        t = dfs(path, 0, bound)
-        if t == 'FOUND':
-            return path
-        if t == float('inf'):
-            return None
-        bound = t
-
-    return None
